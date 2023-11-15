@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지역별 질병 지도 검색도구</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .header {
+            background-color: #f2f2f2;
+            padding: 10px;
+            text-align: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            display: flex;
+            justify-content: space-between; /* 로고와 텍스트를 좌우로 배치하기 위해 추가 */
+            align-items: center; /* 세로 중앙 정렬을 위해 추가 */
+        }
+        .logo {
+            width: 200px; /* 로고의 원하는 크기에 맞게 조절 */
+            height: auto; /* 비율 유지를 위해 추가 */
+            margin-left: 10%;
+        }
+        .title-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-right: 38%;
+        }
+        .container {
+            display: grid;
+            grid-template-rows: 1fr;
+            grid-template-columns: repeat(3, 1fr);
+            align-items: center;
+            justify-content: center;
+            margin: 80px 20px 0; /* 여백 추가, 상단 여백을 헤더의 높이만큼 추가합니다 */
+        }
+        .tier {
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #000; /* 검은 배경색 추가 */
+            color: #fff; /* 흰색 텍스트 색상 추가 */
+            padding: 20px; /* 내부 여백 추가 */
+            margin-left: 10PX;
+            margin-bottom: 10px; /* 티어 사이 여백 추가 */
+        }
+        .select-box {
+            width: 40%;
+            margin-bottom: 20px;
+        }
+        .map-box {
+            width: 600px;
+            text-align: center;
+            margin: 0 auto;
+        }
+        #map1, #map2, #map3 {
+            width: 585px;
+            height: 700px;
+            border: 1px solid #ccc;
+        }
+
+        /* 미디어 쿼리 추가 */
+        @media screen and (max-width: 815px) {
+            .container {
+                grid-template-columns: 1fr; /* 화면이 작아질 때 한 열로 배치 */
+            }
+            .head {
+                grid-template-columns: 1fr;
+            }
+            .logo {
+                grid-template-columns: 1fr;
+            }
+            .body{
+                grid-template-columns: 1fr;
+            }
+            .title-container{
+                grid-template-columns: 1fr;
+            }
+            .tier {
+                width: 100%;
+            }
+        }
+        /* Footer 스타일 추가 */
+        .footer {
+            background-color: #f2f2f2;
+            padding: 10px;
+            text-align: center;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+       <!-- 로고와 제목을 같은 그룹으로 묶음 -->
+       <div class="logo-container">
+        <img src="회사로고.png" alt="Company Logo" class="logo">
+        </div>
+       <div class="title-container">
+        <h1>||| 지역별 질병 지도 검색도구 |||</h1>
+    </div>
+    </div>
+
+    <div class="container">
+        <!-- 첫 번째 열: 도시 선택 박스 -->
+        <div class="tier">
+            <div class="select-box">
+                <label for="city">도시 선택:</label>
+                <select id="city" onchange="updateCounties()">
+                    <option value="">도시를 선택하세요</option>
+                    <option value="seoul">서울</option>
+                    <!-- 다른 도시들을 추가할 수 있습니다 -->
+                </select>
+            </div>
+            <!-- 지도 표시 상자 -->
+            <div class="map-box">
+                <div id="map1"></div>
+            </div>
+        </div>
+
+        <!-- 두 번째 열: 군/구 선택 박스 -->
+        <div class="tier">
+            <div class="select-box">
+                <label for="county">군/구 선택:</label>
+                <select id="county" onchange="updateDistricts()">
+                    <option value="">군/구를 선택하세요</option>
+                    <!-- 선택된 도시에 따라 동적으로 업데이트될 내용 -->
+                </select>
+            </div>
+            <!-- 지도 표시 상자 -->
+            <div class="map-box">
+                <div id="map2"></div>
+            </div>
+        </div>
+
+        <!-- 세 번째 열: 동 선택 박스 -->
+        <div class="tier">
+            <div class="select-box">
+                <label for="district">동 선택:</label>
+                <select id="district">
+                    <option value="">동을 선택하세요</option>
+                    <!-- 선택된 군/구에 따라 동적으로 업데이트될 내용 -->
+                </select>
+            </div>
+            <!-- 지도 표시 상자 -->
+            <div class="map-box">
+                <div id="map3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 도시, 군/구, 동 데이터
+        const cityData = {
+            seoul: ["강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"],
+            // 다른 도시들의 군/구를 추가할 수 있습니다
+        };
+
+        // 도시 선택시 군/구 업데이트
+        function updateCounties() {
+            const citySelect = document.getElementById("city");
+            const countySelect = document.getElementById("county");
+            const districtSelect = document.getElementById("district");
+
+            // 이전 선택을 초기화
+            countySelect.innerHTML = "<option value=''>군/구를 선택하세요</option>";
+            districtSelect.innerHTML = "<option value=''>동을 선택하세요</option>";
+
+            const selectedCity = citySelect.value;
+
+            if (selectedCity in cityData) {
+                // 선택된 도시에 해당하는 군/구 목록 생성
+                cityData[selectedCity].forEach(county => {
+                    const option = document.createElement("option");
+                    option.value = county;
+                    option.textContent = county;
+                    countySelect.appendChild(option);
+                });
+            }
+        }
+         // 동 데이터
+        const districtData = {
+            "강남구": ["개포동", "논현동", "대치동", "도곡동", "삼성동", "세곡동", "수서동", "신사동", "압구정동", "역삼동", "율현동"],
+            "강동구": ["강일동", "고덕동", "길동", "둔촌동", "명일동", "상일동", "성내동", "암사동", "천호동"],
+            "강북구": ["미아동", "번동", "수유동", "우이동", "인수동"],
+            "강서구": ["가양동", "공항동", "과해동", "내발산동", "등촌동", "마곡동", "방화동", "염창동", "오곡동", "오쇠동"],
+            "관악구": ["남현동", "난곡동", "난향동", "난향동", "대학동", "미성동", "보라매동", "성현동", "신림동", "신사동"],
+            "광진구": ["광장동", "구의동", "군자동", "능동", "자양동", "중곡동", "화양동"],
+            "구로구": ["가리봉동", "개봉동", "고척동", "구로동", "궁동", "신도림동", "오류동", "온수동", "천왕동", "항동"],
+            "금천구": ["가산동", "독산동", "시흥동"],
+            "노원구": ["공릉동", "상계동", "월계동", "중계동", "하계동"],
+            "도봉구": ["도봉동", "방학동", "쌍문동", "창동"],
+            "동대문구": ["답십리동", "신설동", "용두동", "이문동", "장안동", "전농동", "제기동", "청량리동"],
+            "동작구": ["노량진동", "대방동", "동작동", "본동", "사당동", "상도동", "신대방동", "흑석동"],
+            "마포구": ["공덕동", "구수동", "망원동", "상암동", "서교동", "성산동", "신공덕동", "신수동", "염리동", "용강동", "중동", "창전동", "토정동", "하중동"],
+            "서대문구": ["남가좌동", "냉천동", "북가좌동", "북아현동", "신촌동", "연희동"],
+            "서초구": ["내곡동", "반포동", "방배동", "서초동", "양재동", "염곡동", "잠원동", "청계동"],
+            "성동구": ["금호동", "도선동", "마장동", "사근동", "성수동", "송정동", "옥수동", "용답동", "응봉동", "하왕십리동", "행당동"],
+            "성북구": ["길음동", "돈암동", "동선동", "보문동", "삼선동", "석관동", "성북동", "안암동", "월곡동", "장위동", "정릉동", "종암동", "하월곡동"],
+            "송파구": ["가락동", "거여동", "마천동", "문정동", "방이동", "삼전동", "석촌동", "송파동", "신천동", "오금동", "잠실동"],
+            "양천구": ["목동", "신정동", "신월동", "신정동", "신월동", "신정동", "신월동", "신정동", "신월동", "신정동", "신월동", "신정동", "신월동"],
+            "영등포구": ["당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동", "당산동"],
+            "용산구": ["남영동", "동빙고동", "동자동", "문배동", "보광동", "산천동", "서빙고동", "신계동", "용문동", "용산동", "이촌동", "이태원동", "주성동", "청암동", "한남동", "효창동", "후암동"],
+            "은평구": ["갈현동", "구산동", "녹번동", "대조동", "불광동", "수색동", "신사동", "역촌동", "응암동", "증산동", "진관동"],
+            "종로구": ["가회동", "견지동", "경운동", "계동", "공평동", "관수동", "관철동", "관훈동", "교남동", "구기동", "권농동", "권농동", "낙원동", "내수동", "누하동", "당주동", "도렴동", "돈의동", "동숭동", "명륜동", "무악동", "묘동", "봉익동", "부암동", "사간동", "사교동", "사직동", "삼청동", "서린동", "세종로", "소격동", "송현동", "수송동", "숭인동", "신문로1가", "신문로2가", "신영동", "안국동", "연건동", "연지동", "예지동", "옥인동", "와룡동", "운니동", "원서동", "원서동", "원효로1가", "원효로2가", "원효로3가", "원효로4가", "윈지동", "익선동", "인사동", "인의동", "장사동", "재동", "적선동", "종로1가", "종로2가", "종로3가", "종로4가", "종로5가", "종로6가", "중학동", "창성동", "창신동", "청운동", "청진동", "체부동", "충신동", "통인동", "통의동", "팔판동", "평동", "평창동", "필운동", "행촌동", "혜화동", "홍지동", "홍파동", "화동", "효자동", "훈정동"],
+            "중구": ["무교동", "묵정동", "방산동", "봉래동", "소공동", "수하동", "신당동", "쌍림동", "예관동", "예장동", "오장동", "을지로", "인현동", "입정동", "저동1가", "저동2가", "정동", "주자동", "중림동", "초동", "충무로1가", "충무로2가", "태평로1가", "태평로2가", "필동", "황학동", "회현동"],
+            "중랑구": ["망우동", "면목동", "묵동", "상봉동", "신내동", "중화동"]
+            // 다른 군/구들과 동을 추가할 수 있습니다
+        };
+
+
+        // 군/구 선택시 동 업데이트
+function updateDistricts() {
+    const countySelect = document.getElementById("county");
+    const districtSelect = document.getElementById("district");
+
+    // 이전 선택을 초기화
+    districtSelect.innerHTML = "<option value=''>동을 선택하세요</option>";
+
+    const selectedCounty = countySelect.value;
+
+    // 선택된 군/구에 해당하는 동 목록 생성
+    if (selectedCounty in districtData) {
+        districtData[selectedCounty].forEach(district => {
+            const option = document.createElement("option");
+            option.value = district;
+            option.textContent = district;
+            districtSelect.appendChild(option);
+        });
+    }
+}
+    </script>
+    <!-- Footer 추가 -->
+    <div class="footer">
+        © 2023 Eden AllLiVE HEALTHCARE Co., Ltd. Corporate Research Center All rights reserved.
+    </div>
+</body>
+
+</html>
+
